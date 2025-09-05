@@ -1,0 +1,32 @@
+body {
+  font-family: Arial;
+  margin: 24px;
+  line-height: 1.4;
+}
+
+h1,
+h3 {
+  font-family: David, Arial, sans-serif;
+}
+
+h1 {
+  color: darkblue;
+}
+
+h3 {
+  color: blue;
+}
+
+form {
+  margin-top: 12px;
+}
+
+input {
+  padding: 4px 6px;
+  margin: 4px 0;
+}
+
+#result {
+  margin-top: 12px;
+  font-weight: bold;
+}
