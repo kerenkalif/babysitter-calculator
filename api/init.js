@@ -1,5 +1,7 @@
 // CommonJS export — יציב ב-Vercel
 module.exports = (req, res) => {
+  console.log("API called with:", req.query);
+
   if (req.method !== "GET") {
     return res.status(405).json({ ok: false, error: "Method not allowed" });
   }
@@ -35,7 +37,7 @@ module.exports = (req, res) => {
     const frames = Array.from({ length: steps }, (_, i) => ({
       step: i,
       view: {
-        value: base + i,
+        value: base + 2 * i,
         explain: i === 0 ? "Initial calculation" : "Increment by 1",
       },
       consoleDelta:
