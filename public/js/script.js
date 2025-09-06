@@ -10,9 +10,7 @@ class BabysitterCalculatorUI {
       button: opts.buttonSelector || 'button[type="button"], button#calcBtn',
     };
     this.steps = Number.isFinite(opts.steps) ? opts.steps : 50; // כמה מצבים ב-trace
-    this.frames = [];
-    this.idx = -1; // אינדקס הפריים הנוכחי ב-trace
-    this.lastInputs = null;
+    this.reset();
 
     this.cacheDom();
     this.bindEvents();
@@ -42,13 +40,16 @@ class BabysitterCalculatorUI {
     window.calcPayment = () => this.onButton();
   }
 
-  onInputsChanged() {
+  reset() {
     this.frames = [];
     this.idx = -1;
     this.lastInputs = null;
     this.setResult("Ready to calculate.");
     this.setButtonText("Calculate Payment!");
     if (this.$button) this.$button.disabled = false;
+  }
+  onInputsChanged() {
+    this.reset();
   }
 
   setButtonText(txt) {
@@ -96,55 +97,6 @@ class BabysitterCalculatorUI {
     return { hours, rate, travel };
   }
 
-  buildUrl({ hours, rate, travel, steps }) {
-    const p = new URLSearchParams({
-      hours: String(hours),
-      rate: String(rate),
-      travel: String(travel),
-      steps: String(steps),
-    });
-    return `/api/init?${p.toString()}`;
-  }
-
-  async fetchTrace(url) {
-    const res = await fetch(url, { method: "GET" });
-    if (!res.ok) {
-      const body = await res.text().catch(() => "");
-      throw new Error(`API ${res.status}: ${body || "request failed"}`);
-    }
-    const data = await res.json();
-    if (!data?.ok || !Array.isArray(data.frames)) {
-      throw new Error("Unexpected server response.");
-    }
-    return data;
-  }
-
-  // --- flow ---
-  async handleClick() {
-    try {
-      const { hours, rate, travel } = this.validateInputs();
-      this.setResult("Calculating…", true);
-
-      const url = this.buildUrl({
-        hours,
-        rate,
-        travel,
-        steps: this.defaultSteps,
-      });
-      const data = await this.fetchTrace(url);
-
-      const last = data.frames[data.frames.length - 1];
-      const value = last?.view?.value;
-
-      if (!Number.isFinite(value)) throw new Error("Invalid result frame.");
-
-      this.setResult(`Pay ${value}`, true);
-    } catch (err) {
-      console.error(err);
-      this.setResult(err.message || "Error calculating payment.");
-    }
-  }
-
   renderFrame() {
     const f = this.frames[this.idx];
     if (!f) return;
@@ -175,7 +127,7 @@ class BabysitterCalculatorUI {
     const url = `/api/init?${params.toString()}`;
 
     this.setResult("Calculating…");
-    const res = await fetch(url);
+    const res = await fetch(url, { method: "GET" });
     if (!res.ok) {
       const txt = await res.text().catch(() => "");
       throw new Error(`API ${res.status}: ${txt || "request failed"}`);
@@ -202,20 +154,20 @@ class BabysitterCalculatorUI {
   async onButton() {
     try {
       const inputs = this.readInputs();
-      // אם אין טרייס טעון או שהקלטים השתנו → נאתחל טרייס חדש
-      if (
-        !this.lastInputs ||
-        !this.sameInputs(inputs, this.lastInputs) ||
-        this.frames.length === 0
-      ) {
-        await this.initTrace(inputs);
+
+      const needInit =
+        !this.lastInputs || // פעם ראשונה
+        !this.sameInputs(inputs, this.lastInputs) || // הקלטים השתנו
+        this.frames.length === 0; // אין טרייס טעון
+
+      if (needInit) {
+        await this.initTrace(inputs); // ← פנייה אחת לשרת, שמירה של frames
       } else {
-        // אחרת רק מתקדם צעד בתוך ה-trace המקומי
-        this.nextStep();
+        this.nextStep(); // ← צעד מקומי בלבד, בלי שרת
       }
-    } catch (err) {
-      console.error(err);
-      this.setResult(err.message || "Error calculating payment.");
+    } catch (e) {
+      console.error(e);
+      this.setResult(e.message || "Error");
       this.setButtonText("Calculate Payment!");
     }
   }
