@@ -117,7 +117,7 @@ class BabysitterCalculatorUI {
     }
   }
 
-  async initTrace(inputs) {
+  async getFullTraceFromServer(inputs) {
     const params = new URLSearchParams({
       hours: String(inputs.hours),
       rate: String(inputs.rate),
@@ -141,14 +141,12 @@ class BabysitterCalculatorUI {
     this.idx = 0;
     this.lastInputs = inputs;
     if (this.$button) this.$button.disabled = false;
-    this.renderFrame();
   }
 
   nextStep() {
     if (this.idx < this.frames.length - 1) {
       this.idx += 1;
     }
-    this.renderFrame();
   }
 
   async onButton() {
@@ -161,10 +159,11 @@ class BabysitterCalculatorUI {
         this.frames.length === 0; // אין טרייס טעון
 
       if (needInit) {
-        await this.initTrace(inputs); // ← פנייה אחת לשרת, שמירה של frames
+        await this.getFullTraceFromServer(inputs); // ← פנייה אחת לשרת, שמירה של frames
       } else {
         this.nextStep(); // ← צעד מקומי בלבד, בלי שרת
       }
+      this.renderFrame();
     } catch (e) {
       console.error(e);
       this.setResult(e.message || "Error");
